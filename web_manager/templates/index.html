@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Главное меню бота</title>
+</head>
+<body>
+    
+    {% if not is_bot_started %}
+        <a href="start_bot">Запустить бота</a>
+    {% endif %}
+
+    {% if is_bot_started %}
+        <a href="stop_bot">Остановить бота</a>
+    {% endif %}
+    <hr>
+
+    {% if is_bot_started %}
+        <a href="log">Просмотр лога</a>
+    {% endif %}
+
+</body>
+</html>

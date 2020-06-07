@@ -1,10 +1,13 @@
 from datetime import datetime
+from dateutil import tz
 import time
 import requests
 import threading
 
 from resources.utils import in_new_thread
 from resources.log_record import LogRecord
+
+TIMEZONE_FOR_LOG = 'Europe/Moscow'
 
 class Strategy:
     spread_records = []
@@ -44,39 +47,45 @@ class Strategy:
     def start(self):
         self.ON = True
         self._record_in_log('Начало работы')
-        time.sleep(5)
+        time.sleep(6)
         self._close_positions()
         while self.ON:
             time.sleep(0.7)
             spread = self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price
-            
+            print(self.bitmex_ticker_receiver.ask_price, self.binance_ticker_receiver.bid_price)
             self._record_spread(spread)
             if spread <= self.bottom_spread: # short binance, long bitmex
                 if self.now_in_position and self.reversed_position:
                     self._close_positions()
                     continue
-                self._make_deal_short_binance_and_long_bitmex()
+                self._make_deal(long_bitmex_and_short_binance=True)
                 self.reversed_position = False
             if self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price >= self.top_spread:
                 if self.now_in_position and not self.reversed_position:
                     self._close_positions()
                     continue
                 self.reversed_position = True
-                self._make_deal_long_binance_and_short_bitmex()
+                self._make_deal(short_bitmex_and_long_binance=True)
             print(spread, self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price)
 
 
 
 
-    def _make_deal_short_binance_and_long_bitmex(self):
+    def _make_deal(self, long_bitmex_and_short_binance=False, short_bitmex_and_long_binance=False):
+        if long_bitmex_and_short_binance and short_bitmex_and_long_binance:
+            print('Невозможна односторонняя позиция на обоих бержах')
+            return False
         if self.now_in_position and self.all_position_qty_filled:
             return
         if not self.all_position_qty_filled:
             self._record_in_log(
-                'Bitmex: {}, Binance: {}, разница: {}. Начинаем продавать на Binance и покупать на Bitmex'.format(
+                'Bitmex: {}, Binance: {}, разница: {}. Начинаем {} на Binance и {} на Bitmex'.format(
                     self.bitmex_ticker_receiver.ask_price,
                     self.binance_ticker_receiver.bid_price,
-                    round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3)))
+                    round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3),
+                    'продавать' if long_bitmex_and_short_binance else 'покупать',
+                    'продавать' if short_bitmex_and_long_binance else 'покупать',
+                    ))
 
             # amount to trade processing:
             available_qty_in_orderbook = min( # in USD
@@ -97,9 +106,10 @@ class Strategy:
                 return
 
             #trading:
-            self._market_order_binance(False, amount_to_trade/self.binance_ticker_receiver.bid_price,)
-            self._market_order_bitmex(True, amount_to_trade)
+            self._market_order_binance(False if long_bitmex_and_short_binance else True, amount_to_trade/self.binance_ticker_receiver.bid_price,)
+            self._market_order_bitmex(True if long_bitmex_and_short_binance else False, amount_to_trade)
             self.now_in_position = True
+
 
 
     @in_new_thread
@@ -141,41 +151,11 @@ class Strategy:
 
 
 
-    def _make_deal_long_binance_and_short_bitmex(self):
-        if self.now_in_position and self.all_position_qty_filled:
-            return
-        if not self.all_position_qty_filled:
-            self._record_in_log(
-                'Bitmex: {}, Binance: {}, разница: {}. Начинаем покупать на Binance и Продавать на Bitmex'.format(
-                    self.bitmex_ticker_receiver.ask_price,
-                    self.binance_ticker_receiver.bid_price,
-                    round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3)))
-            # amount to trade processing:
-            available_qty_in_orderbook = min( # in USD
-                self.bitmex_ticker_receiver.qty_in_best_bid,
-                self.binance_ticker_receiver.qty_in_best_ask)
-            ideal_amount_to_trade = self._calc_amount_for_trade()
-            if ideal_amount_to_trade < available_qty_in_orderbook:
-                amount_to_trade = ideal_amount_to_trade
-                self.all_position_qty_filled = True
-                self._record_in_log('В стакане достаточно средств для позиции в {}$'.format(amount_to_trade))
-            else:
-                amount_to_trade = available_qty_in_orderbook
-                self.remain_qty_for_position = ideal_amount_to_trade - amount_to_trade
-                self._record_in_log('В стакане не хватает средств для всей сделки({}$). Используем только {}$'.format(
-                    ideal_amount_to_trade, amount_to_trade))
-            if self.remain_qty_for_position < 2 and self.now_in_position:
-                self.all_position_qty_filled = True
-                return
-
-            #trading:
-            self._market_order_binance(True, amount_to_trade/self.binance_ticker_receiver.bid_price,)
-            self._market_order_bitmex(False, amount_to_trade)
-            self.now_in_position = True
 
 
 
     def _close_positions(self):
+        self.now_in_position = False
         qty_for_binance = -self._get_binance_position_amount()['ETH']
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not qty_for_binance==0 or qty_for_bitmex==0:
@@ -193,7 +173,6 @@ class Strategy:
             bitmex_closing_position.start()
             binance_closing_position.join()
             bitmex_closing_position.join()
-        self.now_in_position = False
         self.all_position_qty_filled = False
         bitmex_balance = self._get_bitmex_balance_in_usd()
         binance_balance = self._get_binance_balance_in_usd()
@@ -221,10 +200,17 @@ class Strategy:
 
 
     def _get_bitmex_position_amount(self):
-        for asset in self.bitmex_client.Position.Position_get().result()[0]:
-            if asset['symbol']=='ETHUSD':
-                return {'USD': int(asset['execQty']),}
-                break
+        for n_error in range(5):
+            try:
+                for asset in self.bitmex_client.Position.Position_get().result()[0]:
+                    if asset['symbol']=='ETHUSD':
+                        return {'USD': int(asset['execQty']),}
+                        break
+                return
+            except Exception as er:
+                print('Ошибка при получении баланса Bitmex, попытка через 5 сек:', str(er))
+                time.sleep(5.5)
+
 
 
     def _get_bitmex_balance_in_usd(self):
@@ -253,15 +239,17 @@ class Strategy:
     def _record_spread(self, spread):
         if self.spread_recorder_is_available:
             self.spread_recorder_is_available = False
-            self.spread_records.append((datetime.now(), round(spread, 3)))
-            if len(self.spread_records) > 1440*7: # Записей больше, чем минут в неделе
+            self.spread_records.append((datetime.now().astimezone(tz.gettz(TIMEZONE_FOR_LOG)), round(spread, 3)))
+            if len(self.spread_records) > 1440*7*4: # Записей больше, чем минут в неделе
                 del self.spread_records[0] #удалить первую запись
-            time.sleep(60)
+            time.sleep(15)
             self.spread_recorder_is_available = True
 
     def _record_in_log(self, text, color='black'):
-        dt = datetime.now()
-        print('[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text))
+        dt = datetime.now().astimezone(tz.gettz(TIMEZONE_FOR_LOG))
+        text_to_print = '[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text)
+        print(text_to_print)
+        open('log.log', 'a').write(text)
         self.web_log_records.append(LogRecord(dt=dt, text=text, color=color))
 
 

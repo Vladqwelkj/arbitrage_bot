@@ -1,4 +1,5 @@
-from unicorn_binance_websocket_api.unicorn_binance_websocket_api_manager import BinanceWebSocketApiManager
+#from unicorn_binance_websocket_api.unicorn_binance_websocket_api_manager import BinanceWebSocketApiManager
+from resources.binance_futures.binance_futures import WebsocketMarket
 import threading
 import time
 import json
@@ -13,26 +14,16 @@ class BinanceTickerReceiver:
 
 
     def __init__(self,):
-        self.bm = BinanceWebSocketApiManager(exchange="binance.com-futures")
-        def start_loop_for_ticker_receiving():
-            while True:
-                data = self.bm.pop_stream_data_from_stream_buffer()
-                if not data:
-                    time.sleep(0.1)
-                try:
-                    data = json.loads(data)
-                    #print(data)
-                    self.bid_price = float(data['data']['b'])
-                    self.qty_in_best_bid = float(data['data']['B'])*self.bid_price # In USDT
-                    self.ask_price = float(data['data']['a'])
-                    self.qty_in_best_ask = float(data['data']['A'])*self.ask_price # In USDT
-                except:
-                    pass
-                time.sleep(0.1)
-
-        self.bm.create_stream({'bookTicker'}, {'ethusdt'})
-        worker_thread = threading.Thread(target=start_loop_for_ticker_receiving)
-        worker_thread.start()
+        def process_message(ws, msg):
+            print(msg)
+            try:
+                self.ask_price = float(msg['a'][0][0])
+                self.bid_price = float(msg['b'][0][0])
+                self.qty_in_best_ask = float(msg['a'][0][1])*self.ask_price
+                self.qty_in_best_bid = float(msg['b'][0][1])*self.bid_price
+            except Exception as er:
+                print('ws price binance error: ', str(er))
+        WebsocketMarket(symbol='ethusdt', on_message=process_message, speed='100ms').partial_book_depth_socket(levels=5)
 
 
 

@@ -3,41 +3,56 @@ from bitmex import bitmex
 from resources.binance_futures import binance_futures
 from resources.strategy_logic import Strategy
 from resources.email_client import EmailClient
+from resources.utils import in_new_thread
 from resources.binance_ticker_receiver import BinanceTickerReceiver
 from resources.bitmex_ticker_receiver import BitmexTickerReciever
 
-binance_client = binance_futures.Client(
-    'e5OelOe6n0vnAwrmH7W86Uee6phbMdKp66l85YlroAv9XhF45W3uI5aqCZRGYWVj',
-    'hy5EACev7C5acknBDPfZ44WNA8OWPcNXYOhhOYjamVO5QZA5oPIPcZjqwUDP5RtU',
-    symbol='ETHUSDT',
-    testnet=False
-    )
+from web_manager import web
 
-bitmex_client = bitmex(
-    test=False,
-    api_key='10OTgpO8u6tJYReF_9tpYXuT',
-    api_secret='_I_1NPGhleO0EJwe2qfstyFz0NFleNgTwlNeuQV3Sa8t1lsv')
+binance_ticker_receiver = BinanceTickerReceiver()
+bitmex_ticker_receiver = BitmexTickerReciever()
 
-email_client = EmailClient(login='arbitrage.bot@inbox.ru',
-    password='AtDrsinYK42_',
-    smtp_server='smtp.mail.ru',
-    target_email='vladkanal@gmail.com')
-'''
-print(bitmex_client.Position.Position_get().result())
-exit()
-bitmex_client.Order.Order_new( #Market
-                   symbol = 'ETHUSD',
-                   side = 'Buy',
-                   orderQty = 1496,
-                   ).result()'''
+STRATEGY = None
 
-if __name__=='__main__':
-    strategy = Strategy(binance_client=binance_client,
-        binance_ticker_receiver=BinanceTickerReceiver(),
+@in_new_thread
+def FUNC_FOR_START(
+    api_key_binance, api_secret_binance,
+    api_key_bitmex, api_secret_bitmex,
+    percent_to_trade, bottom_spread, top_spread, email):
+    global STRATEGY, binance_ticker_receiver, bitmex_ticker_receiver
+    binance_client = binance_futures.Client(
+        api_key_binance,
+        api_secret_binance,
+        symbol='ETHUSDT',
+        testnet=False,)
+
+    bitmex_client = bitmex(
+        test=False,
+        api_key=api_key_bitmex,
+        api_secret=api_secret_bitmex,)
+
+    email_client = EmailClient(login='arbitrage.bot@inbox.ru',
+        password='AtDrsinYK42_',
+        smtp_server='smtp.mail.ru',
+        target_email=email,)
+
+    STRATEGY = Strategy(binance_client=binance_client,
+        binance_ticker_receiver=binance_ticker_receiver,
         bitmex_client=bitmex_client,
-        bitmex_ticker_receiver=BitmexTickerReciever(),
+        bitmex_ticker_receiver=bitmex_ticker_receiver,
         email_client=email_client,
-        amount_to_trade_percent=5,
+        amount_to_trade_percent=percent_to_trade,
 
         warning_diff_percent=10,) #  Для отправки разницы на почту)
-    strategy.start()
+    STRATEGY.start()
+
+
+@in_new_thread
+def FUNC_FOR_STOP():
+    global STRATEGY
+    STRATEGY.stop()
+
+if __name__=='__main__':
+    web.FUNC_FOR_START = FUNC_FOR_START
+    web.FUNC_FOR_STOP = FUNC_FOR_STOP
+    web.app.run('0.0.0.0', '80')

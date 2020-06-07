@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Лог</title>
+</head>
+<body>
+
+    {% for log_record in log_records %}
+        <p>
+            <span style="color: gray;" class="datetime">{{ record.dt.strftime('[%m-%d %H:%M:%S] ')}}</span>
+            <span style="color: {{record.color}};" class="record">{{record.text}}</span>
+        </p>
+        <hr>
+    {% endfor %}
+</body>
+</html>

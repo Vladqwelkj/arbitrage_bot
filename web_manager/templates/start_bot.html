@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Запуск бота</title>
+</head>
+<body>
+    <form action="" method="post">
+
+        <label for="api_key_bitmex">API key для Bitmex:</label>
+        <input type="text" size=60px id="api_key_bitmex" name="api_key_bitmex" value=""><br><br>
+
+        <label for="api_secret_bitmex">API secret для Bitmex:</label>
+        <input type="password" size=60px id="api_secret_bitmex" name="api_secret_bitmex" value=""><br><br>
+
+        <hr>
+
+        <label for="api_key_binance">API key для Binance:</label>
+        <input type="text" size=60px id="api_key_binance" name="api_key_binance" value=""><br><br>
+
+        <label for="api_secret_binance">API secret для Binance:</label>
+        <input type="password" size=60px id="api_secret_binance" name="api_secret_binance" value=""><br><br>
+
+        <hr>
+
+        <label for="percent_to_trade">Процент капитала для торговли(на одну сделку)</label>
+        <input type="text" size=6px id="percent_to_trade" name="percent_to_trade" value="100"><br><br>
+
+        <label for="bottom_spread">Нижний уровень спреда</label>
+        <input type="text" size=6px id="bottom_spread" name="bottom_spread" value="-0.1"><br><br>
+
+        <label for="top_spread">Верхний уровень спреда</label>
+        <input type="text" size=6px id="top_spread" name="top_spread" value="0.6"><br><br>
+
+        <hr>
+
+        <label for="email">Почта для оповещений о состоянии баланса</label>
+        <input type="email" size=30px id="email" name="email" value="test123@gmail.com"><br><br>
+
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" value=""><br><br>
+
+        <input type="submit" value="Запуск">
+    </form>
+</body>
+</html>

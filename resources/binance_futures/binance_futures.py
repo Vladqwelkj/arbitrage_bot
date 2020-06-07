@@ -220,7 +220,7 @@ class MarketData:
 class WebsocketMarket:
     
     def __init__(self,
-                 on_message = lambda ws, message: (stdout.write(f'\r{json.loads(message)}'), stdout.flush()),
+                 on_message,
                  on_error = lambda ws, error: print(error),
                  on_close = lambda ws: print("### closed ###"),
                  testnet: bool = False,
