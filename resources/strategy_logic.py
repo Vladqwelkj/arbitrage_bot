@@ -247,7 +247,7 @@ class Strategy:
 
     def _record_in_log(self, text, color='black'):
         dt = datetime.now().astimezone(tz.gettz(TIMEZONE_FOR_LOG))
-        text_to_print = '[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text)
+        text_to_print = '/n[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text)
         print(text_to_print)
         open('log.log', 'a').write(text)
         self.web_log_records.append(LogRecord(dt=dt, text=text, color=color))
