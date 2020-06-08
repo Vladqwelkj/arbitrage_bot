@@ -12,14 +12,14 @@ from web_manager import web
 binance_ticker_receiver = BinanceTickerReceiver()
 bitmex_ticker_receiver = BitmexTickerReciever()
 
-STRATEGY = None
+#STRATEGY = None
 
 @in_new_thread
 def FUNC_FOR_START(
     api_key_binance, api_secret_binance,
     api_key_bitmex, api_secret_bitmex,
     percent_to_trade, bottom_spread, top_spread, email):
-    global STRATEGY, binance_ticker_receiver, bitmex_ticker_receiver
+    global binance_ticker_receiver, bitmex_ticker_receiver
     binance_client = binance_futures.Client(
         api_key_binance,
         api_secret_binance,
@@ -36,7 +36,7 @@ def FUNC_FOR_START(
         smtp_server='smtp.mail.ru',
         target_email=email,)
 
-    STRATEGY = Strategy(binance_client=binance_client,
+    web.STRATEGY = Strategy(binance_client=binance_client,
         binance_ticker_receiver=binance_ticker_receiver,
         bitmex_client=bitmex_client,
         bitmex_ticker_receiver=bitmex_ticker_receiver,
@@ -44,15 +44,15 @@ def FUNC_FOR_START(
         amount_to_trade_percent=percent_to_trade,
 
         warning_diff_percent=10,) #  Для отправки разницы на почту)
-    STRATEGY.start()
+    web.STRATEGY.start()
 
 
 @in_new_thread
 def FUNC_FOR_STOP():
     global STRATEGY
-    STRATEGY.stop()
+    web.STRATEGY.stop()
 
 if __name__=='__main__':
     web.FUNC_FOR_START = FUNC_FOR_START
     web.FUNC_FOR_STOP = FUNC_FOR_STOP
-    web.app.run('0.0.0.0', '80')
+    web.app.run('0.0.0.0', '5050')
