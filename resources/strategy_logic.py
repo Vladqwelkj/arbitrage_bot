@@ -158,7 +158,7 @@ class Strategy:
         self.now_in_position = False
         qty_for_binance = -self._get_binance_position_amount()['ETH']
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
-        if not qty_for_binance==0 or qty_for_bitmex==0:
+        if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
             self._record_in_log('Закрытие позиций. На Bitmex: {}$, на Binance {} ETH'.format(
                 qty_for_bitmex, qty_for_binance))
@@ -180,6 +180,8 @@ class Strategy:
             self.email_client.send_notification_about_balance(
                 bitmex_balance=bitmex_balance,
                 binance_balance=binance_balance)
+        self._record_in_log('Баланс Bitmex $'+str(bitmex_balance))
+        self._record_in_log('Баланс Binance $'+str(binance_balance))
         
 
 
@@ -196,6 +198,11 @@ class Strategy:
                     'ETH': float(asset['positionAmt']),
                     'USD': float(asset['positionAmt'])*ETHUSDT_price,
                     }
+        return {
+            'ETH': 0,
+            'USD': 0,
+            }
+
 
 
 
@@ -206,7 +213,7 @@ class Strategy:
                     if asset['symbol']=='ETHUSD':
                         return {'USD': int(asset['execQty']),}
                         break
-                return
+                return {'USD': 0,}
             except Exception as er:
                 print('Ошибка при получении баланса Bitmex, попытка через 5 сек:', str(er))
                 time.sleep(5.5)
@@ -247,9 +254,9 @@ class Strategy:
 
     def _record_in_log(self, text, color='black'):
         dt = datetime.now().astimezone(tz.gettz(TIMEZONE_FOR_LOG))
-        text_to_print = '/n[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text)
+        text_to_print = '\n[{}:{}:{}] {}'.format(dt.hour, dt.minute, dt.second, text)
         print(text_to_print)
-        open('log.log', 'a').write(text)
+        open('log.log', 'a').write(text_to_print)
         self.web_log_records.append(LogRecord(dt=dt, text=text, color=color))
 
 

@@ -12,7 +12,7 @@ from web_manager import web
 binance_ticker_receiver = BinanceTickerReceiver()
 bitmex_ticker_receiver = BitmexTickerReciever()
 
-#STRATEGY = None
+STRATEGY = [None,]
 
 @in_new_thread
 def FUNC_FOR_START(
@@ -36,7 +36,7 @@ def FUNC_FOR_START(
         smtp_server='smtp.mail.ru',
         target_email=email,)
 
-    web.STRATEGY = Strategy(binance_client=binance_client,
+    STRATEGY[0] = Strategy(binance_client=binance_client,
         binance_ticker_receiver=binance_ticker_receiver,
         bitmex_client=bitmex_client,
         bitmex_ticker_receiver=bitmex_ticker_receiver,
@@ -44,15 +44,16 @@ def FUNC_FOR_START(
         amount_to_trade_percent=percent_to_trade,
 
         warning_diff_percent=10,) #  Для отправки разницы на почту)
-    web.STRATEGY.start()
+    STRATEGY[0].start()
 
 
 @in_new_thread
 def FUNC_FOR_STOP():
     global STRATEGY
-    web.STRATEGY.stop()
+    STRATEGY[0].stop()
 
 if __name__=='__main__':
     web.FUNC_FOR_START = FUNC_FOR_START
     web.FUNC_FOR_STOP = FUNC_FOR_STOP
+    web.STRATEGY = STRATEGY
     web.app.run('0.0.0.0', '5050')

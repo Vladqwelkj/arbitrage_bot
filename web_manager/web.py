@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 FUNC_FOR_START = None
 FUNC_FOR_STOP = None
-STRATEGY = None
+STRATEGY = []
 
 
 IS_BOT_RUNNING = False
@@ -74,6 +74,7 @@ def start_bot():
 
 @app.route('/stop_bot', methods=['GET', 'POST'])
 def stop_bot():
+    global IS_BOT_RUNNING
     if request.method=='POST':
         hashed_received_pwd = hashlib.sha1(request.form.get('password').encode('utf-8')).hexdigest()
         if not hashed_received_pwd==get_valid_hashed_password():
@@ -82,14 +83,28 @@ def stop_bot():
         else:
             IS_BOT_RUNNING = False
             FUNC_FOR_STOP()
+            return 'Бот успешно остановлен'
     if request.method=='GET':
         return render_template('stop_bot.html')
 
 
+@app.route('/spread_log')
+def spread_log():
+    spread_records = []
+    for record in STRATEGY[0].spread_records:
+        spread_records.append('<p><span style="color: gray;">[{}]</span> {}</p>'.format(
+            record[0].strftime('%m/%d %H:%M:%S'), record[1]))
+    return ''.join(spread_records)
+
 
 @app.route('/log')
 def log():
-    render_template('log.html', log_records=STRATEGY.web_log_records)
+    log_records = []
+    for record in STRATEGY[0].web_log_records:
+        log_records.append('<p style="color: {};"><span style="color: gray;">{}</span> {}</p>'.format(
+            record.color, record.dt_str, record.text))
+    #render_template('log.html', log_records=log_records)
+    return ''.join(log_records)
 
 
 
