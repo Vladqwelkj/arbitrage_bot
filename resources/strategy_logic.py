@@ -46,6 +46,7 @@ class Strategy:
     @in_new_thread
     def start(self):
         self.ON = True
+        web_log_records = []
         self._record_in_log('Начало работы')
         time.sleep(6)
         self._close_positions()
@@ -73,7 +74,7 @@ class Strategy:
 
     def _make_deal(self, long_bitmex_and_short_binance=False, short_bitmex_and_long_binance=False):
         if long_bitmex_and_short_binance and short_bitmex_and_long_binance:
-            print('Невозможна односторонняя позиция на обоих бержах')
+            self._record_in_log('Невозможна односторонняя позиция на обоих бержах')
             return False
         if self.now_in_position and self.all_position_qty_filled:
             return
