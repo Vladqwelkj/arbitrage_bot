@@ -41,8 +41,9 @@ def FUNC_FOR_START(
         bitmex_client=bitmex_client,
         bitmex_ticker_receiver=bitmex_ticker_receiver,
         email_client=email_client,
-        amount_to_trade_percent=percent_to_trade,
-
+        amount_to_trade_percent=float(percent_to_trade),
+        bottom_spread=float(bottom_spread),
+        top_spread=float(top_spread),
         warning_diff_percent=10,) #  Для отправки разницы на почту)
     STRATEGY[0].start()
 
