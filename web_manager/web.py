@@ -90,11 +90,13 @@ def stop_bot():
 
 @app.route('/spread_log')
 def spread_log():
+    binance_price = STRATEGY[0].binance_ticker_receiver.ask_price
+    bitmex_price = STRATEGY[0].bitmex_ticker_receiver.bid_price
     spread_records = []
     for record in STRATEGY[0].spread_records:
         spread_records.append('<p><span style="color: gray;">[{}]</span> {}</p>'.format(
             record[0].strftime('%m/%d %H:%M:%S'), record[1]))
-    return ''.join(spread_records)
+    return ''.join(spread_records)+'<hr><p>Binance: {}, Bitmex: {}</p>'.format(binance_price, bitmex_price)
 
 
 @app.route('/log')
