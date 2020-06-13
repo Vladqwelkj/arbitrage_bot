@@ -1,5 +1,6 @@
 import time
 import hashlib
+from datetime import datetime
 
 from flask import Flask, render_template
 from flask import request
@@ -90,13 +91,22 @@ def stop_bot():
 
 @app.route('/spread_log')
 def spread_log():
-    binance_price = STRATEGY[0].binance_ticker_receiver.ask_price
-    bitmex_price = STRATEGY[0].bitmex_ticker_receiver.bid_price
-    spread_records = []
-    for record in STRATEGY[0].spread_records:
-        spread_records.append('<p><span style="color: gray;">[{}]</span> {}</p>'.format(
-            record[0].strftime('%m/%d %H:%M:%S'), record[1]))
-    return ''.join(spread_records)+'<hr><p>Binance: {}, Bitmex: {}</p>'.format(binance_price, bitmex_price)
+    global STRATEGY
+    return render_template('spread_log.html', spread_records=STRATEGY[0].spread_records)
+
+@app.route('/balances_history')
+def balances_history():
+    global STRATEGY
+    sum_profit = 0
+    if not STRATEGY[0]==None:
+        for time_profit in STRATEGY[0].PnL_history:
+            sum_profit += time_profit[1]
+
+    return render_template(
+        'balances_history.html',
+        bitmex_binance_balances_history=STRATEGY[0].bitmex_binance_balances_history,
+        xbtusd_price=STRATEGY[0]._get_XBTUSD_price(),
+        sum_profit=sum_profit)
 
 
 @app.route('/log')

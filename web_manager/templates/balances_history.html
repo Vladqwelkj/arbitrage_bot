@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>История изменения балансов</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+<h2>Общий баланс:</h2>
+
+<script>
+    var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
+        timeVisible:true, secondsVisible:true}});
+    var lineSeries = chart.addLineSeries();
+    lineSeries.setData([
+        {% for record in bitmex_binance_balances_history %}
+            { time: {{ record[0] }}, value: {{ record[1]*xbtusd_price+record[2] }} },
+        {% endfor %}    
+    ]);
+    chart.timeScale().fitContent();
+</script>
+
+<hr>
+
+<h2>Результаты сделок в USD:</h2>
+
+<script>
+    var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
+        timeVisible:true, secondsVisible:true}});
+    var lineSeries = chart.addLineSeries();
+    lineSeries.setData([
+        {% for result in PnL_history %}
+            { time: {{ result[0] }}, value: {{ result[1] }} },
+        {% endfor %}    
+    ]);
+    chart.timeScale().fitContent();
+</script>
+<p>Общая прибыль: {{sum_profit}} $</p>
+<hr>
+
+<h2>Баланс на Bitmex в BTC:</h2>
+
+<script>
+    var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
+        timeVisible:true, secondsVisible:true}});
+    var lineSeries = chart.addLineSeries();
+    lineSeries.setData([
+        {% for record in bitmex_binance_balances_history %}
+            { time: {{ record[0] }}, value: {{ record[1] }} },
+        {% endfor %}    
+    ]);
+    chart.timeScale().fitContent();
+</script>
+
+<hr>
+
+<h2>Баланс на Bitmex в USD по текущему курсу:</h2>
+
+<script>
+    var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
+        timeVisible:true, secondsVisible:true}});
+    var lineSeries = chart.addLineSeries();
+    lineSeries.setData([
+        {% for record in bitmex_binance_balances_history %}
+            { time: {{ record[0] }}, value: {{ record[1]*xbtusd_price }} },
+        {% endfor %}    
+    ]);
+    chart.timeScale().fitContent();
+</script>
+
+<hr>
+
+<h2>Баланс на Binance:</h2>
+
+<script>
+    var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
+        timeVisible:true, secondsVisible:true}});
+    var lineSeries = chart.addLineSeries();
+    lineSeries.setData([
+        {% for record in bitmex_binance_balances_history %}
+            { time: {{ record[0] }}, value: {{ record[2] }} },
+        {% endfor %}    
+    ]);
+    chart.timeScale().fitContent();
+</script>
+
+</body>
+</html>
