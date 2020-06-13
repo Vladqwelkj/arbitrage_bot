@@ -46,7 +46,7 @@ class Strategy:
     @in_new_thread
     def start(self):
         self.ON = True
-        web_log_records = []
+        self.clear_web_log()
         self._record_in_log('Начало работы')
         time.sleep(6)
         self._close_positions()
@@ -92,23 +92,27 @@ class Strategy:
             available_qty_in_orderbook = min( # in USD
                 self.bitmex_ticker_receiver.qty_in_best_ask,
                 self.binance_ticker_receiver.qty_in_best_bid)
-            ideal_amount_to_trade = self._calc_amount_for_trade()
-            if ideal_amount_to_trade < available_qty_in_orderbook:
-                amount_to_trade = ideal_amount_to_trade
+            if not self.now_in_position:
+                ideal_amount_to_trade = self._calc_amount_for_trade()
+                self.remain_qty_for_position = ideal_amount_to_trade
+            if self.remain_qty_for_position < 2 and self.now_in_position:
+                self.all_position_qty_filled = True
+                return
+            if self.remain_qty_for_position < available_qty_in_orderbook:
+                amount_to_trade = self.remain_qty_for_position 
+                self.remain_qty_for_position = 0
                 self.all_position_qty_filled = True
                 self._record_in_log('В стакане достаточно средств для позиции в {}$'.format(amount_to_trade))
             else:
                 amount_to_trade = available_qty_in_orderbook
-                self.remain_qty_for_position = ideal_amount_to_trade - amount_to_trade
+                self.remain_qty_for_position -= amount_to_trade
                 self._record_in_log('В стакане не хватает средств для всей сделки({}$). Используем только {}$'.format(
-                    ideal_amount_to_trade, amount_to_trade))
-            if self.remain_qty_for_position < 2 and self.now_in_position:
-                self.all_position_qty_filled = True
-                return
+                    self.remain_qty_for_position, amount_to_trade))
+
 
             #trading:
-            self._market_order_binance(False if long_bitmex_and_short_binance else True, amount_to_trade/self.binance_ticker_receiver.bid_price,)
             self._market_order_bitmex(True if long_bitmex_and_short_binance else False, amount_to_trade)
+            self._market_order_binance(False if long_bitmex_and_short_binance else True, amount_to_trade/self.binance_ticker_receiver.bid_price,)
             self.now_in_position = True
 
 
@@ -129,10 +133,10 @@ class Strategy:
 
 
 
-    @in_new_thread
+    #@in_new_thread
     def _market_order_bitmex(self, side_is_buy, qty):
         print('bitmex qty:', round(abs(float(qty))))
-        for n_errors in range(1, 6): #5 попыток
+        for n_errors in range(1, 7): #6 попыток
             try:
                 order = self.bitmex_client.Order.Order_new( #Market
                    symbol = 'ETHUSD',
@@ -145,10 +149,10 @@ class Strategy:
                     color='green' if side_is_buy else 'red',)
                 return order
             except Exception as er:
-                print('bitmex error order placing:', str(er))
+                self._record_in_log('bitmex error order placing:'+str(er))
                 self._record_in_log(
                     'Ошибка выставления ордера на Bitmex. Повтор через 5 секунд. Попытка №'+str(n_errors))
-                time.sleep(5.5)
+                time.sleep(5)
 
 
 
@@ -161,8 +165,9 @@ class Strategy:
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
-            self._record_in_log('Закрытие позиций. На Bitmex: {}$, на Binance {} ETH'.format(
-                qty_for_bitmex, qty_for_binance))
+            self._record_in_log('Закрытие позиций. На Bitmex: {}$, цена {}, на Binance {} ETH, цена {}'.format(
+                qty_for_bitmex, self.bitmex_ticker_receiver.ask_price,
+                qty_for_binance, self.bitmex_ticker_receiver.bid_price))
             binance_closing_position = threading.Thread(
                 target=self._market_order_binance,
                 args=(True if qty_for_binance>0 else False, qty_for_binance,))
@@ -260,6 +265,9 @@ class Strategy:
         open('log.log', 'a').write(text_to_print)
         self.web_log_records.append(LogRecord(dt=dt, text=text, color=color))
 
+
+    def clear_web_log(self):
+        self.web_log_records = []
 
     def stop(self):
         self.ON = False
