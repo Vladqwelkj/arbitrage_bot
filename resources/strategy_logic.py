@@ -11,7 +11,8 @@ TIMEZONE_FOR_LOG = 'Europe/Moscow'
 
 class Strategy:
     spread_records = []
-    spread_recorder_is_available = True
+    spread_recorder_is_open = True
+    spreads_tmp = []
     balance_bitmex_start = 0
     balance_binance_start = 0
     web_log_records = []
@@ -86,7 +87,7 @@ class Strategy:
             return
         if not self.all_position_qty_filled:
             self._record_in_log(
-                'Bitmex: {}, Binance: {}, разница: {}. Начинаем {} на Binance и {} на Bitmex'.format(
+                'Bitmex: {}, Binance: {}, спред: {}. Начинаем {} на Binance и {} на Bitmex'.format(
                     self.bitmex_ticker_receiver.ask_price,
                     self.binance_ticker_receiver.bid_price,
                     round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3),
@@ -135,7 +136,7 @@ class Strategy:
         self._record_in_log('Binance: выставлен ордер на {} на {} по ~{}'.format(
             'покупку' if side_is_buy else 'продажу',
             qty,
-            self.binance_ticker_receiver.bid_price),
+            order['avgPrice']),
                 color='green' if side_is_buy else 'red',)
         return order
 
@@ -156,7 +157,7 @@ class Strategy:
                 self._record_in_log('Bitmex: выставлен ордер на {} на {}$ по ~{}'.format(
                     'покупку' if side_is_buy else 'продажу',
                     round(qty),
-                    self.bitmex_ticker_receiver.ask_price),
+                    order[0]['avgPx']),
                         color='green' if side_is_buy else 'red',)
                 return order
             except Exception as er:
@@ -173,9 +174,10 @@ class Strategy:
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
-            self._record_in_log('Закрытие позиций. На Bitmex: {}$, цена {}, на Binance {} ETH, цена {}'.format(
-                qty_for_bitmex, self.bitmex_ticker_receiver.ask_price,
-                qty_for_binance, self.bitmex_ticker_receiver.bid_price))
+            self._record_in_log('Закрытие позиций. На Bitmex: {}$, на Binance {} ETH. Спред: {}'.format(
+                qty_for_bitmex,
+                qty_for_binance,
+                self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price))
             binance_closing_position = threading.Thread(
                 target=self._market_order_binance,
                 args=(True if qty_for_binance>0 else False, qty_for_binance,))
@@ -222,14 +224,14 @@ class Strategy:
         self.balance_bitmex_start = self._get_bitmex_balance_in_btc()
         self.balance_binance_start = self._get_binance_balance_in_usd()
         self.bitmex_binance_balances_history.append(
-            (int(time.time()-1), self.balance_bitmex_start, round(self.balance_binance_start, 2))
+            (int(time.time()), self.balance_bitmex_start, round(self.balance_binance_start, 3))
             )
 
 
 
     def _calc_amount_for_trade(self): # In USD
         amount = self._get_bitmex_balance_in_usd()*(self.amount_to_trade_percent/100)
-        return amount
+        return int(amount)
 
 
 
@@ -255,10 +257,9 @@ class Strategy:
                 for asset in self.bitmex_client.Position.Position_get().result()[0]:
                     if asset['symbol']=='ETHUSD':
                         return {'USD': int(asset['execQty']),}
-                        break
                 return {'USD': 0,}
             except Exception as er:
-                print('Ошибка при получении баланса Bitmex, попытка через 5 сек:', str(er))
+                print('Ошибка при получении позиции Bitmex, попытка через 5 сек:', str(er))
                 time.sleep(5.5)
 
 
@@ -313,13 +314,21 @@ class Strategy:
 
     @in_new_thread
     def _record_spread(self, spread):
-        if self.spread_recorder_is_available:
-            self.spread_recorder_is_available = False
-            self.spread_records.append((int(time.time()), round(spread, 2)))
-            if len(self.spread_records) > 1440*7*4: # Записей больше, чем минут в неделе
+        if self.spread_recorder_is_open:
+            self.spread_recorder_is_open = False
+            self.spreads_tmp.append(spread)
+            o = round(self.spreads_tmp[0], 2)
+            h = round(max(self.spreads_tmp), 2)
+            l = round(min(self.spreads_tmp), 2)
+            c = round(self.spreads_tmp[-1], 2)
+            self.spread_records.append((int(time.time()), o, h, l, c))
+            self.spreads_tmp = []
+            if len(self.spread_records) > 1440*7: # Записей больше, чем минут в неделе
                 del self.spread_records[0] #удалить первую запись
-            time.sleep(15)
-            self.spread_recorder_is_available = True
+            time.sleep(60)
+            self.spread_recorder_is_open = True
+        else:
+            self.spreads_tmp.append(spread)
 
 
 

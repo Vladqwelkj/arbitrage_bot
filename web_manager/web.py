@@ -106,7 +106,8 @@ def balances_history():
         'balances_history.html',
         bitmex_binance_balances_history=STRATEGY[0].bitmex_binance_balances_history,
         xbtusd_price=STRATEGY[0]._get_XBTUSD_price(),
-        sum_profit=sum_profit)
+        sum_profit=sum_profit,
+        PnL_history=STRATEGY[0].PnL_history)
 
 
 @app.route('/log')

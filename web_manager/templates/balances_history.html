@@ -43,6 +43,7 @@
     var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
         timeVisible:true, secondsVisible:true}});
     var lineSeries = chart.addLineSeries();
+    lineSeries.applyOptions({priceFormat: {precision: 8}})
     lineSeries.setData([
         {% for record in bitmex_binance_balances_history %}
             { time: {{ record[0] }}, value: {{ record[1] }} },

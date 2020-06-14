@@ -9,10 +9,10 @@
 <script>
 	var chart = LightweightCharts.createChart(document.body, { width: 1200, height: 500, timeScale:{
 		timeVisible:true, secondsVisible:true}});
-	var lineSeries = chart.addLineSeries();
-	lineSeries.setData([
+	var barSeries = chart.addBarSeries();
+	barSeries.setData([
 		{% for spread_record in spread_records %}
-	    	{ time: {{ spread_record[0] }}, value: {{ spread_record[1] }} },
+	    	{ time: {{ spread_record[0] }},  open: {{spread_record[1]}}, high: {{spread_record[2]}}, low: {{spread_record[3]}}, close: {{spread_record[4]}} },
 	   	{% endfor %} 	
 	]);
 	chart.timeScale().fitContent();
