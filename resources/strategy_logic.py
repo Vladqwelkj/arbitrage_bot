@@ -408,7 +408,7 @@ class Strategy:
             self.spread_recorder_is_need_to_close = False
             self.spreads_tmp.append(spread)
             self.spread_records.append((int(time.time()), spread))
-            if abs(min(self.spread_tmp)) > abs(max(self.spread_tmp):
+            if abs(min(self.spread_tmp)) > abs(max(self.spread_tmp)):
                 spread = min(self.spread_tmp)
             else:
                 spread = max(self.spread_tmp)
