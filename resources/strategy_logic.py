@@ -72,7 +72,6 @@ class Strategy:
                     continue
                 self.reversed_position = True
                 self._make_deal(short_bitmex_and_long_binance=True)
-            print(spread, self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price)
 
 
     def check_spread_condition(self, for_reverse_deal=False):
@@ -93,10 +92,10 @@ class Strategy:
             #trading:
             while True:
                 if long_bitmex_and_short_binance:
-                    price = bitmex_ticker_receiver.ask_price
+                    price = self.bitmex_ticker_receiver.ask_price
                     side_is_buy = True
                 if short_bitmex_and_long_binance:
-                    price = bitmex_ticker_receiver.bid_price
+                    price = self. bitmex_ticker_receiver.bid_price
                     side_is_buy = False
 
                 if self.check_spread_condition() or self.check_spread_condition(for_reverse_deal=True):
@@ -408,10 +407,10 @@ class Strategy:
             self.spread_recorder_is_need_to_close = False
             self.spreads_tmp.append(spread)
             self.spread_records.append((int(time.time()), spread))
-            if abs(min(self.spread_tmp)) > abs(max(self.spread_tmp)):
-                spread = min(self.spread_tmp)
+            if abs(min(self.spreads_tmp)) > abs(max(self.spreads_tmp)):
+                spread = min(self.spreads_tmp)
             else:
-                spread = max(self.spread_tmp)
+                spread = max(self.spreads_tmp)
             self.spread_records.append((int(time.time()), spread))
             self.spreads_tmp = []
             time.sleep(10)
