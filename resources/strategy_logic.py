@@ -10,8 +10,8 @@ from resources.log_record import LogRecord
 TIMEZONE_FOR_LOG = 'Europe/Moscow'
 
 class Strategy:
-    spread_records = []
-    spread_recorder_is_open = True
+    spread_records = [(int(time.time()), 0,0,0,0), ]
+    spread_recorder_is_need_to_close = True
     spreads_tmp = []
     balance_bitmex_start = 0
     balance_binance_start = 0
@@ -59,16 +59,14 @@ class Strategy:
         self._calc_initial_balances()
         while self.ON:
             time.sleep(0.7)
-            spread = self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price
-            print(self.bitmex_ticker_receiver.ask_price, self.binance_ticker_receiver.bid_price)
-            self._record_spread(spread)
-            if spread <= self.bottom_spread: # short binance, long bitmex
+
+            if self.check_spread_condition(): # short binance, long bitmex
                 if self.now_in_position and self.reversed_position:
                     self._close_positions()
                     continue
                 self._make_deal(long_bitmex_and_short_binance=True)
                 self.reversed_position = False
-            if self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price >= self.top_spread:
+            if self.check_spread_condition(for_reverse_deal=True):
                 if self.now_in_position and not self.reversed_position:
                     self._close_positions()
                     continue
@@ -77,48 +75,92 @@ class Strategy:
             print(spread, self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price)
 
 
+    def check_spread_condition(self, for_reverse_deal=False):
+        spread = self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price
+        spread_for_reverse = self.bitmex_ticker_receiver.bid_price - self.binance_ticker_receiver.ask_price
+        self._record_spread(spread)
+        if not for_reverse_deal and spread <= self.bottom_spread:
+            return True
+        if for_reverse_deal and spread_for_reverse >= self.top_spread:
+            return True
+        else:
+            return False
+            
+
 
 
     def _make_deal(self, long_bitmex_and_short_binance=False, short_bitmex_and_long_binance=False):
-        if long_bitmex_and_short_binance and short_bitmex_and_long_binance:
-            self._record_in_log('Невозможна односторонняя позиция на обоих бержах')
-            return False
-        if self.now_in_position and self.all_position_qty_filled:
-            return
-        if not self.all_position_qty_filled:
-            self._record_in_log(
-                'Bitmex: {}, Binance: {}, спред: {}. Начинаем {} на Binance и {} на Bitmex'.format(
-                    self.bitmex_ticker_receiver.ask_price,
-                    self.binance_ticker_receiver.bid_price,
-                    round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3),
-                    'продавать' if long_bitmex_and_short_binance else 'покупать',
-                    'продавать' if short_bitmex_and_long_binance else 'покупать',
-                    ))
-
-            # amount to trade processing:
-            available_qty_in_orderbook = min( # in USD
-                self.bitmex_ticker_receiver.qty_in_best_ask,
-                self.binance_ticker_receiver.qty_in_best_bid)
-            if not self.now_in_position:
-                ideal_amount_to_trade = self._calc_amount_for_trade()
-                self.remain_qty_for_position = ideal_amount_to_trade
-            if self.remain_qty_for_position < 2 and self.now_in_position:
-                self.all_position_qty_filled = True
-                return
-            if self.remain_qty_for_position < available_qty_in_orderbook:
-                amount_to_trade = self.remain_qty_for_position 
-                self.remain_qty_for_position = 0
-                self.all_position_qty_filled = True
-                self._record_in_log('В стакане достаточно средств для позиции в {}$'.format(amount_to_trade))
-            else:
-                amount_to_trade = available_qty_in_orderbook
-                self.remain_qty_for_position -= amount_to_trade
-                self._record_in_log('В стакане не хватает средств для всей сделки({}$). Используем только {}$'.format(
-                    self.remain_qty_for_position, amount_to_trade))
-
-
             #trading:
-            self._market_order_bitmex(True if long_bitmex_and_short_binance else False, amount_to_trade)
+            while True:
+                if long_bitmex_and_short_binance:
+                    price = bitmex_ticker_receiver.ask_price
+                    side_is_buy = True
+                if short_bitmex_and_long_binance:
+                    price = bitmex_ticker_receiver.bid_price
+                    side_is_buy = False
+
+                if self.check_spread_condition() or self.check_spread_condition(for_reverse_deal=True):
+                    if long_bitmex_and_short_binance and short_bitmex_and_long_binance:
+                        return
+                    if self.now_in_position and self.all_position_qty_filled:
+                        return
+                    if not self.all_position_qty_filled:
+                        self._record_in_log(
+                            'Bitmex: {}, Binance: {}, спред: {}. Начинаем {} на Binance и {} на Bitmex'.format(
+                                self.bitmex_ticker_receiver.ask_price,
+                                self.binance_ticker_receiver.bid_price,
+                                round(self.bitmex_ticker_receiver.ask_price-self.binance_ticker_receiver.bid_price, 3),
+                                'продавать' if long_bitmex_and_short_binance else 'покупать',
+                                'продавать' if short_bitmex_and_long_binance else 'покупать',
+                                ))
+
+                        # amount to trade calculating:
+                        available_qty_in_orderbook = min( # in USD
+                            self.bitmex_ticker_receiver.qty_in_best_ask,
+                            self.binance_ticker_receiver.qty_in_best_bid)
+                        if not self.now_in_position:
+                            ideal_amount_to_trade = self._calc_amount_for_trade()
+                            self.remain_qty_for_position = ideal_amount_to_trade
+                        if self.remain_qty_for_position < 2 and self.now_in_position:
+                            self.all_position_qty_filled = True
+                            return
+                        if self.remain_qty_for_position < available_qty_in_orderbook:
+                            amount_to_trade = self.remain_qty_for_position 
+                            self.remain_qty_for_position = 0
+                            self.all_position_qty_filled = True
+                            self._record_in_log('В стакане достаточно средств для позиции в {}$'.format(amount_to_trade))
+                        else:
+                            amount_to_trade = available_qty_in_orderbook
+                            self.remain_qty_for_position -= amount_to_trade
+                            self._record_in_log('В стакане не хватает средств для всей сделки({}$). Используем только {}$'.format(
+                                self.remain_qty_for_position, amount_to_trade))
+
+                    # order placing:
+                    order_bitmex = self._limit_order_bitmex(side_is_buy, amount_to_trade, price)
+                    if order_bitmex[0]['ordStatus']=='New':
+                        break
+                else:
+                    return
+
+            time_from_order_placing = time.time()
+            while True: # Слежение за тем, чтобы получить позицию
+                if self._get_order_bitmex_status_by_id(order_bitmex[0]['orderID'])=='Filled':
+                    self._record_in_log('Лимитный ордер на bitmex заполнен')
+                    break
+                if time.time() - time_from_order_placing > 60*7: # не исполняется больше X минут.
+                    self._record_in_log(
+                        'Не можем зайти в позицию на bitmex в течении нескольких минут. Отмена сделки')
+                    self._cancel_bitmex_order_by_id(order_bitmex[0]['orderID'])
+                    self._close_positions(calc_profit=False)
+                    return
+                if (not self.check_spread_condition()) and (not self.check_spread_condition(for_reverse_deal=True)): # спред больше не подходит для сделки
+                    self._record_in_log('Пока ожидали исполнение ордера на bitmex, размер спред перестал быть нужным. Отмена сделки')
+                    self._cancel_bitmex_order_by_id(order_bitmex[0]['orderID'])
+                    self._close_positions(calc_profit=False)
+                    return
+                time.sleep(2.5)
+
+            # Когда исполнен ордер на битмиксе, исполнить маркет на бинансе
             self._market_order_binance(False if long_bitmex_and_short_binance else True, amount_to_trade/self.binance_ticker_receiver.bid_price,)
             self.now_in_position = True
 
@@ -167,10 +209,63 @@ class Strategy:
                 time.sleep(5)
 
 
+    def _limit_order_bitmex(self, side_is_buy, qty, price):
+        if qty==0:
+            return
+        for n_errors in range(1, 7): #6 попыток
+            try:
+                order = self.bitmex_client.Order.Order_new( #Market
+                    ordType='Limit',
+                    price=price,
+                   symbol = 'ETHUSD',
+                   side = 'Buy' if side_is_buy else 'Sell',
+                   orderQty = abs(int(qty)),
+                   execInst='ParticipateDoNotInitiate',
+                   ).result()
+                self._record_in_log('Bitmex: выставлен limit ордер на {} на {}$ по ~{}'.format(
+                    'покупку' if side_is_buy else 'продажу',
+                    round(qty),
+                    price,),
+                        color='green' if side_is_buy else 'red',)
+                return order
+            except Exception as er:
+                self._record_in_log('bitmex error order placing:'+str(er))
+                self._record_in_log(
+                    'Ошибка выставления ордера на Bitmex. Повтор через 5 секунд. Попытка №'+str(n_errors))
+                time.sleep(5)
+
+
+
+    def _get_order_bitmex_status_by_id(self, order_id):
+        for n_errors in range(1, 6): #5 попыток
+            try:
+                orders = self.bitmex_client.Order.Order_getOrders(symbol='ETHUSD').result()[0]
+                break
+            except Exception as e:
+                print('Ошибка при получении статуса ордера: ', str(e))
+                time.sleep(5.5)
+        for order in orders:
+            if order['orderID']==orderID:
+                return order['ordStatus']
+
+
+
+    def _cancel_bitmex_order_by_id(self, order_id):
+        for n_errors in range(1, 6): #5 попыток
+            try:
+                self.bitmex_client.Order.Order_cancel(orderID=order_id).result()
+                self._record_in_log('Успешно удален ордер '+str(order_id))
+                return
+            except Exception as e:
+                print('Ошибка при удалении ордера: ', str(e))
+                time.sleep(5.5)
+
+
 
     def _close_positions(self, calc_profit=True):
         self.now_in_position = False
-        qty_for_binance = -self._get_binance_position_amount()['ETH']
+        btimex_position_info = self._get_binance_position_amount()
+        qty_for_binance = abs(btimex_position_info['ETH'])
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
@@ -204,13 +299,11 @@ class Strategy:
         
 
     def _calc_and_print_profit(self, bitmex_balance_btc, binance_balance):
-        if len(self.bitmex_binance_balances_history)==0:#первая сделка
-            pnl_bitmex = bitmex_balance_btc - self.balance_bitmex_start
-            pnl_binance = binance_balance - self.balance_binance_start
-        else:
-            pnl_bitmex = bitmex_balance_btc - self.bitmex_binance_balances_history[-1][1]
-            pnl_binance = binance_balance - self.bitmex_binance_balances_history[-1][2]
+        pnl_bitmex = bitmex_balance_btc - self.bitmex_binance_balances_history[-1][1]
+        pnl_binance = binance_balance - self.bitmex_binance_balances_history[-1][2]
         pnl_summary = round(pnl_bitmex*self._get_XBTUSD_price() + pnl_binance, 2)
+        open('PnL(for debug).log', 'a').write('[{}]bx: {}, bn: {}, sum: {}\n'.format(
+            datetime.now(), pnl_bitmex, pnl_binance, pnl_summary))
         self.bitmex_binance_balances_history.append(
             (int(time.time()), round(bitmex_balance_btc, 2), round(binance_balance, 2))
             )
@@ -240,6 +333,7 @@ class Strategy:
         for asset in self.binance_client.position_info():
             if asset['symbol']=='ETHUSDT':
                 return {
+                    'side_is_buy': True if asset['positionSide']=='BUY' else 'SELL',
                     'ETH': float(asset['positionAmt']),
                     'USD': float(asset['positionAmt'])*ETHUSDT_price,
                     }
@@ -265,26 +359,17 @@ class Strategy:
 
 
     def _get_bitmex_balance_in_usd(self):
-        for n_errors in range(1, 6):
-            try:
-                balance_btc = self.bitmex_client.User.User_getMargin(
-                    currency='XBt'
-                    ).result()[0]['amount']/(10**8)
-                balance_usd = balance_btc*self._get_XBTUSD_price()
-                return balance_usd
-            except Exception as er:
-                print('Ошибка при получени баланса bitmex:', str(er))
-                time.sleep(5.5)
+        balance_usd = self._get_bitmex_balance_in_btc()*self._get_XBTUSD_price()
+        return round(balance_usd, 3)
 
 
 
     def _get_bitmex_balance_in_btc(self):
         for n_errors in range(1, 6):
             try:
-                balance_btc = self.bitmex_client.User.User_getMargin(
-                    currency='XBt'
-                    ).result()[0]['amount']/(10**8)
-                return balance_btc
+                wallet_info = self.bitmex_client.User.User_getMargin().result()[0]
+                balance = wallet_info['walletBalance']+wallet_info['unrealisedPnl']
+                return balance/(10**8)
             except Exception as er:
                 print('Ошибка при получени баланса bitmex:', str(er))
                 time.sleep(5.5)
@@ -297,8 +382,13 @@ class Strategy:
 
 
     def _get_XBTUSD_price(self): #from bitmex
-        price = requests.get('https://www.bitmex.com/api/v1/orderBook/L2?symbol=XBTUSD&depth=1').json()[0]['price']
-        return price
+        for n_errors in range(1,6):
+            try:
+                price = requests.get('https://www.bitmex.com/api/v1/orderBook/L2?symbol=XBTUSD&depth=1').json()[0]['price']
+                return float(price)
+            except Exception as e:
+                print('XBTUSD price get error:', str(e))
+                time.sleep(5.5)
 
 
 
@@ -314,8 +404,8 @@ class Strategy:
 
     @in_new_thread
     def _record_spread(self, spread):
-        if self.spread_recorder_is_open:
-            self.spread_recorder_is_open = False
+        if self.spread_recorder_is_need_to_close:
+            self.spread_recorder_is_need_to_close = False
             self.spreads_tmp.append(spread)
             o = round(self.spreads_tmp[0], 2)
             h = round(max(self.spreads_tmp), 2)
@@ -326,7 +416,7 @@ class Strategy:
             if len(self.spread_records) > 1440*7: # Записей больше, чем минут в неделе
                 del self.spread_records[0] #удалить первую запись
             time.sleep(60)
-            self.spread_recorder_is_open = True
+            self.spread_recorder_is_need_to_close = True
         else:
             self.spreads_tmp.append(spread)
 

@@ -38,6 +38,7 @@ def main_page():
     return render_template('index.html', is_bot_started=IS_BOT_RUNNING)
 
 
+
 @app.route('/start_bot', methods=['GET', 'POST'])
 def start_bot():
     global IS_BOT_RUNNING
@@ -73,6 +74,7 @@ def start_bot():
         return render_template('start_bot.html', is_bot_started=IS_BOT_RUNNING)
 
 
+
 @app.route('/stop_bot', methods=['GET', 'POST'])
 def stop_bot():
     global IS_BOT_RUNNING
@@ -89,10 +91,22 @@ def stop_bot():
         return render_template('stop_bot.html')
 
 
+
 @app.route('/spread_log')
 def spread_log():
     global STRATEGY
-    return render_template('spread_log.html', spread_records=STRATEGY[0].spread_records)
+    ask_bitmex = STRATEGY[0].bitmex_ticker_receiver.ask_price
+    bid_bitmex = STRATEGY[0].bitmex_ticker_receiver.bid_price
+    ask_binance = STRATEGY[0].binance_ticker_receiver.ask_price
+    bid_binance = STRATEGY[0].binance_ticker_receiver.bid_price
+    return render_template('spread_log.html',
+        spread_records=STRATEGY[0].spread_records,
+        ask_bitmex=ask_bitmex,
+        bid_bitmex=bid_bitmex,
+        ask_binance=ask_binance,
+        bid_binance=bid_binance,)
+
+
 
 @app.route('/balances_history')
 def balances_history():
@@ -108,6 +122,7 @@ def balances_history():
         xbtusd_price=STRATEGY[0]._get_XBTUSD_price(),
         sum_profit=sum_profit,
         PnL_history=STRATEGY[0].PnL_history)
+
 
 
 @app.route('/log')

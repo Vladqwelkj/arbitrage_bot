@@ -3,6 +3,28 @@
 <head>
     <title>История спреда</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style type="text/css">
+		.orderbook {
+			float: left;
+			text-align: center;
+			width: 180px;
+			height: 120px;
+			outline: 2px solid #000;
+			margin: 5px;
+		}
+
+		.ask{
+			background-color: #DC143C;
+			height: 25px;
+			color: white;
+		}
+
+		.bid{
+			background-color: #6B8E23;
+			height: 25px;
+			color: white;
+		}
+	</style>
 </head>
 <body>
 <h2>Значения спреда:</h2>
@@ -17,5 +39,31 @@
 	]);
 	chart.timeScale().fitContent();
 </script>
+<hr>
+<h3>Стаканы сейчас:</h3>
+
+<div class="orderbook">
+	<p>Binance</p>
+	<div class="ask">
+		<p>SELL {{ask_binance}}</p>
+	</div>
+
+	<div class="bid">
+		<p>BUY {{bid_binance}}</p>
+	</div>
+</div>
+
+
+<div class="orderbook">
+	<p>Bitmex</p>
+	<div class="ask">
+		<p>SELL {{ask_bitmex}}</p>
+	</div>
+
+	<div class="bid">
+		<p>BUY {{bid_bitmex}}</p>
+	</div>
+</div>
+
 </body>
 </html>
