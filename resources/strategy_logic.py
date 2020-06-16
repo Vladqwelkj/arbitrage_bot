@@ -407,15 +407,14 @@ class Strategy:
         if self.spread_recorder_is_need_to_close:
             self.spread_recorder_is_need_to_close = False
             self.spreads_tmp.append(spread)
-            o = round(self.spreads_tmp[0], 2)
-            h = round(max(self.spreads_tmp), 2)
-            l = round(min(self.spreads_tmp), 2)
-            c = round(self.spreads_tmp[-1], 2)
-            self.spread_records.append((int(time.time()), o, h, l, c))
+            self.spread_records.append((int(time.time()), spread))
+            if abs(min(self.spread_tmp)) > abs(max(self.spread_tmp):
+                spread = min(self.spread_tmp)
+            else:
+                spread = max(self.spread_tmp)
+            self.spread_records.append((int(time.time()), spread)
             self.spreads_tmp = []
-            if len(self.spread_records) > 1440*7: # Записей больше, чем минут в неделе
-                del self.spread_records[0] #удалить первую запись
-            time.sleep(60)
+            time.sleep(10)
             self.spread_recorder_is_need_to_close = True
         else:
             self.spreads_tmp.append(spread)
