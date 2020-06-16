@@ -136,7 +136,7 @@ class Strategy:
 
                     # order placing:
                     order_bitmex = self._limit_order_bitmex(side_is_buy, amount_to_trade, price)
-                    if order_bitmex[0]['ordStatus']=='New':
+                    if not order_bitmex[0]['ordStatus']=='Canceled':
                         break
                 else:
                     return
@@ -244,7 +244,7 @@ class Strategy:
                 print('Ошибка при получении статуса ордера: ', str(e))
                 time.sleep(5.5)
         for order in orders:
-            if order['orderID']==orderID:
+            if order['orderID']==order_id:
                 return order['ordStatus']
 
 
@@ -304,7 +304,7 @@ class Strategy:
         open('PnL(for debug).log', 'a').write('[{}]bx: {}, bn: {}, sum: {}\n'.format(
             datetime.now(), pnl_bitmex, pnl_binance, pnl_summary))
         self.bitmex_binance_balances_history.append(
-            (int(time.time()), round(bitmex_balance_btc, 2), round(binance_balance, 2))
+            (int(time.time()), round(bitmex_balance_btc, 8), round(binance_balance, 2))
             )
         self._record_in_log('Результат сделки $: '+str(pnl_summary))
         self.PnL_history.append((int(time.time()), pnl_summary))
