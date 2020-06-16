@@ -412,7 +412,7 @@ class Strategy:
                 spread = min(self.spread_tmp)
             else:
                 spread = max(self.spread_tmp)
-            self.spread_records.append((int(time.time()), spread)
+            self.spread_records.append((int(time.time()), spread))
             self.spreads_tmp = []
             time.sleep(10)
             self.spread_recorder_is_need_to_close = True
