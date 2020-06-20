@@ -298,7 +298,7 @@ class Strategy:
                 for asset in positions:
                     if asset['symbol']=='ETHUSD':
                         return {'USD': int(asset['execQty']),}
-                open('tmp.log).write('\n'+str(positions))
+                open('tmp.log').write('\n'+str(positions))
                 return {'USD': 0,}
             except Exception as er:
                 print('Ошибка при получении позиции Bitmex, попытка через 5 сек:', str(er))
