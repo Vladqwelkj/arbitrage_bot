@@ -122,7 +122,7 @@ class Strategy:
         self._record_in_log('Binance: выставлен ордер на {} на {} по ~{}'.format(
             'покупку' if side_is_buy else 'продажу',
             qty,
-            order['avgPrice']),
+            self.binance_ticker_receiver.ask_price if side_is_buy else self.binance_ticker_receiver.bid_price,
                 color='green' if side_is_buy else 'red',)
         return order
 
@@ -294,9 +294,11 @@ class Strategy:
     def _get_bitmex_position_amount(self):
         for n_error in range(5):
             try:
-                for asset in self.bitmex_client.Position.Position_get().result()[0]:
+                positions = self.bitmex_client.Position.Position_get().result()[0]
+                for asset in positions:
                     if asset['symbol']=='ETHUSD':
                         return {'USD': int(asset['execQty']),}
+                open('tmp.log).write('\n'+str(positions))
                 return {'USD': 0,}
             except Exception as er:
                 print('Ошибка при получении позиции Bitmex, попытка через 5 сек:', str(er))
