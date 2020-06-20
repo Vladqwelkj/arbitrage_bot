@@ -122,7 +122,7 @@ class Strategy:
         self._record_in_log('Binance: выставлен ордер на {} на {} по ~{}'.format(
             'покупку' if side_is_buy else 'продажу',
             qty,
-            self.binance_ticker_receiver.ask_price if side_is_buy else self.binance_ticker_receiver.bid_price,
+            self.binance_ticker_receiver.ask_price if side_is_buy else self.binance_ticker_receiver.bid_price,),
                 color='green' if side_is_buy else 'red',)
         return order
 
