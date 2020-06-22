@@ -211,7 +211,7 @@ class Strategy:
     def _close_positions(self, calc_profit=True):
         self.now_in_position = False
         binance_position_info = self._get_binance_position_amount()
-        qty_for_binance = abs(binance_position_info['ETH'])
+        qty_for_binance = binance_position_info['ETH']
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
@@ -221,7 +221,7 @@ class Strategy:
                 self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price))
             binance_closing_position = threading.Thread(
                 target=self._market_order_binance,
-                args=(not binance_position_info['side_is_buy'], qty_for_binance,))
+                args=(not binance_position_info['side_is_buy'], abs(qty_for_binance),))
             bitmex_closing_position = threading.Thread(
                 target=self._market_order_bitmex,
                 args=(True if qty_for_bitmex>0 else False, qty_for_bitmex,))
