@@ -27,7 +27,7 @@
 			<span>Пара: {{ p['symbol'] }} | </span>
 			<span class="price">Цена входа: {{ p['entryPrice'] }} | </span>
 			<span class="qty">Количество: {{ p['positionAmt'] }} | </span>
-			{% if p['positionAmt'] < 0 %}
+			{% if float(p['positionAmt']) < 0 %}
 				<span style="color: red">SELL</span>
 			{% else %}
 				<span style="color: green">BUY</span>
@@ -44,7 +44,7 @@
 			<span>Пара: {{ p['symbol'] }} | </span>
 			<span class="price">Цена входа: {{ p['avgEntryPrice'] }} | </span>
 			<span class="qty">Количество: {{ p['currentQty'] }} | </span>
-			{% if p['currentQty'] < 0 %}
+			{% if float(p['currentQty']) < 0 %}
 				<span style="color: red">SELL</span>
 			{% else %}
 				<span style="color: green">BUY</span>
