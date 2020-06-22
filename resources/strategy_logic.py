@@ -221,7 +221,7 @@ class Strategy:
                 self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price))
             binance_closing_position = threading.Thread(
                 target=self._market_order_binance,
-                args=(not binance_position_info['side_is_buy'], abs(qty_for_binance),))
+                args=(True if -qty_for_binance>0 else False, abs(qty_for_binance),))
             bitmex_closing_position = threading.Thread(
                 target=self._market_order_bitmex,
                 args=(True if -qty_for_bitmex>0 else False, -qty_for_bitmex,))
@@ -279,7 +279,7 @@ class Strategy:
         for asset in self.binance_client.position_info():
             if asset['symbol']=='ETHUSDT':
                 return {
-                    'side_is_buy': True if asset['positionSide']=='BUY' else 'SELL',
+                    'side_is_buy': True if float(asset['positionAmt']) > 0 else False,
                     'ETH': float(asset['positionAmt']),
                     'USD': float(asset['positionAmt'])*ETHUSDT_price,
                     }
