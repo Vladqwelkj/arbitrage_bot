@@ -210,8 +210,8 @@ class Strategy:
 
     def _close_positions(self, calc_profit=True):
         self.now_in_position = False
-        btimex_position_info = self._get_binance_position_amount()
-        qty_for_binance = abs(btimex_position_info['ETH'])
+        binance_position_info = self._get_binance_position_amount()
+        qty_for_binance = abs(binance_position_info['ETH'])
         qty_for_bitmex = -self._get_bitmex_position_amount()['USD']
         if not (qty_for_binance==0 and qty_for_bitmex==0):
             # процесс закрытия позиций
@@ -221,7 +221,7 @@ class Strategy:
                 self.bitmex_ticker_receiver.ask_price - self.binance_ticker_receiver.bid_price))
             binance_closing_position = threading.Thread(
                 target=self._market_order_binance,
-                args=(True if qty_for_binance>0 else False, qty_for_binance,))
+                args=(binance_position_info['side_is_buy'], qty_for_binance,))
             bitmex_closing_position = threading.Thread(
                 target=self._market_order_bitmex,
                 args=(True if qty_for_bitmex>0 else False, qty_for_bitmex,))
@@ -297,7 +297,7 @@ class Strategy:
                 positions = self.bitmex_client.Position.Position_get().result()[0]
                 for asset in positions:
                     if asset['symbol']=='ETHUSD':
-                        return {'USD': int(asset['execQty']),}
+                        return {'USD': int(asset['currentQty']),}
                 open('tmp.log').write('\n'+str(positions))
                 return {'USD': 0,}
             except Exception as er:

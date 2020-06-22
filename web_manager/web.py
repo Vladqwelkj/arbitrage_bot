@@ -31,6 +31,16 @@ def get_valid_hashed_password():
     return pwd
 
 
+def get_binance_positions():
+    positions = STRATEGY[0].binance_client.position_info()
+    return positions
+
+
+def get_bitmex_positions():
+    positions = STRATEGY[0].bitmex_client.Position.Position_get().result()[0]
+    return positions
+
+
 
 ########### Views:
 @app.route('/')
@@ -89,6 +99,13 @@ def stop_bot():
             return 'Бот успешно остановлен'
     if request.method=='GET':
         return render_template('stop_bot.html')
+
+
+@app.route('/check_positions')
+def check_positions():
+    return render_template('check_positions.html',
+        bitmex_positions=get_bitmex_positions(),
+        binance_positions=get_binance_positions(),)
 
 
 

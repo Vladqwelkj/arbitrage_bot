@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Текущие позиции</title>
+	<style type="text/css">
+		
+		.position {
+			margin-left: 5%;
+			width: 90%;
+		    outline: 2px solid #000; /* Чёрная рамка */
+		    border: 3px solid #fff; /* Белая рамка */
+		    border-radius: 10px; /* Радиус скругления */
+		    text-align: center;
+		    font-size: 150%;
+		}
+
+
+
+	</style>
+</head>
+<body>
+
+	<h1>Binance:</h1>
+
+	{% for p in binance_positions %}
+		<div class="position">
+			<span>Пара: {{ p['symbol'] }} | </span>
+			<span class="price">Цена входа: {{ p['entryPrice'] }} | </span>
+			<span class="qty">Количество: {{ p['positionAmt'] }} | </span>
+			{% if p['positionAmt'] < 0 %}
+				<span style="color: red">SELL</span>
+			{% else %}
+				<span style="color: green">BUY</span>
+			{% endif %}
+		</div>
+	{% endfor %}
+
+	<hr>
+
+	<h1>Bitmex</h1>
+
+	{% for p in bitmex_positions %}
+		<div class="position">
+			<span>Пара: {{ p['symbol'] }} | </span>
+			<span class="price">Цена входа: {{ p['avgEntryPrice'] }} | </span>
+			<span class="qty">Количество: {{ p['currentQty'] }} | </span>
+			{% if p['currentQty'] < 0 %}
+				<span style="color: red">SELL</span>
+			{% else %}
+				<span style="color: green">BUY</span>
+			{% endif %}
+		</div>
+	{% endfor %}
+
+</body>
+</html>
